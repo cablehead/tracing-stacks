@@ -14,6 +14,7 @@ use tracing_subscriber::layer::Context;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
+pub mod fmt;
 mod tests;
 
 pub struct Monitor {
