@@ -8,6 +8,8 @@ use tokio::sync::broadcast;
 
 use chrono::{DateTime, Utc};
 
+use colored::Colorize;
+
 use tracing_layer_lib::{Entry, RootSpanLayer};
 
 #[tracing::instrument]
@@ -63,18 +65,26 @@ fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Res
         ),
     };
 
-    let loc = format!("{}:{}", entry.file.as_ref().map_or("", |f| f.as_str()),
-        entry.line.map_or_else(|| "".to_string(), |num| num.to_string()));
+    let loc = format!(
+        "{}:{}",
+        entry.file.as_ref().map_or("", |f| f.as_str()),
+        entry
+            .line
+            .map_or_else(|| "".to_string(), |num| num.to_string())
+    );
 
-    writeln!(
-        writer,
-        "{} {:>5} {}{}  {}",
+    let message = format!(
+        "{} {:>5} {}{}",
         formatted_time,
         entry.level,
         prefix,
         format_entry_message(entry),
-        loc,
-    )?;
+    );
+
+    let total_width = console::measure_text_width(&message) + console::measure_text_width(&loc);
+    let padding = " ".repeat(80 - total_width);
+
+    writeln!(writer, "{}{}{}", message, padding, loc)?;
 
     for child in &entry.children {
         write_entry(writer, child, depth + 1)?;
@@ -87,17 +97,26 @@ fn format_entry_message(entry: &Entry) -> String {
     let mut parts = vec![];
 
     if entry.took > 0 {
-        parts.push(format!("[{} {}us]", entry.name, entry.took));
+        parts.push(format!("{} ({}us)", entry.name.green(), entry.took));
     }
 
-    for (key, value) in &entry.fields {
-        if key != "message" {
-            parts.push(format!("{}={}", key, value));
-        }
+    let mut fields = entry.fields.clone();
+
+    let message = fields.remove("message");
+
+    if !fields.is_empty() {
+        parts.push(format!(
+            "[{}]",
+            fields
+                .iter()
+                .map(|(key, value)| format!("{}:{}", key, value))
+                .collect::<Vec<String>>()
+                .join(" ")
+        ));
     }
 
-    if let Some(message) = entry.fields.get("message") {
-        parts.push(format!(":: {}", message));
+    if let Some(message) = message {
+        parts.push(format!("{}", message.italic()));
     }
 
     parts.join(" ")

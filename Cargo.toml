@@ -14,3 +14,7 @@ tracing-subscriber = "0.3.17"
 [lib]
 name = "tracing_layer_lib"
 path = "src/lib.rs"
+
+[dev-dependencies]
+colored = "2.0.4"
+console = "0.15.7"
