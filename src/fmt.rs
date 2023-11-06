@@ -56,7 +56,10 @@ fn format_entry_message(entry: &Entry) -> String {
 
     if entry.took > 0 {
         parts.push(style(&entry.name).cyan().to_string());
-        parts.push(format!("({}us)", entry.took));
+        let ms = entry.took / 1000;
+        if ms > 0 {
+            parts.push(format!("[{}ms]", ms));
+        }
     }
 
     let fields = entry
