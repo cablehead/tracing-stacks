@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,17 +11,18 @@ use tracing::span::{Attributes, Id};
 use tracing::Subscriber;
 use tracing::{Event, Level};
 use tracing_subscriber::layer::Context;
-use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
 
-struct Monitor {
-    span_count: usize,
+pub mod fmt;
+mod tests;
+
+pub struct Monitor {
+    pub span_count: usize,
 }
 
 impl Monitor {
-    fn notify(&mut self, spans: &HashMap<Id, Scope>) {
+    pub fn notify(&mut self, spans: &HashMap<Id, Scope>) {
         self.span_count = spans.len();
     }
 }
@@ -33,7 +34,7 @@ enum Child {
 }
 
 #[derive(Debug, Clone)]
-struct Scope {
+pub struct Scope {
     stamp: SystemTime,
     level: Level,
     name: String,
@@ -94,20 +95,20 @@ impl Scope {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Entry {
-    stamp: u64,
-    level: String,
-    name: String,
+pub struct Entry {
+    pub stamp: u64,
+    pub level: String,
+    pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    file: Option<String>,
+    pub file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    line: Option<u32>,
+    pub line: Option<u32>,
     #[serde(skip_serializing_if = "is_zero")]
-    took: u128,
+    pub took: u128,
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
-    fields: HashMap<String, String>,
+    pub fields: HashMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    children: Vec<Entry>,
+    pub children: Vec<Entry>,
 }
 
 fn is_zero(num: &u128) -> bool {
@@ -135,7 +136,7 @@ pub struct RootSpanLayer {
 }
 
 impl RootSpanLayer {
-    fn new(sender: broadcast::Sender<Entry>, monitor: Option<Arc<Mutex<Monitor>>>) -> Self {
+    pub fn new(sender: broadcast::Sender<Entry>, monitor: Option<Arc<Mutex<Monitor>>>) -> Self {
         RootSpanLayer {
             spans: Mutex::new(HashMap::new()),
             sender,
@@ -228,113 +229,5 @@ where
                 monitor.lock().unwrap().notify(&spans);
             }
         }
-    }
-}
-
-#[tracing::instrument]
-fn more(x: u32) {
-    tracing::info!(info = "yes", "more!");
-}
-
-#[tracing::instrument]
-fn foobar() {
-    more(3);
-}
-
-#[tokio::main]
-async fn main() {
-    let (tx, mut rx) = broadcast::channel(16);
-
-    tracing_subscriber::Registry::default()
-        .with(RootSpanLayer::new(tx.clone(), None))
-        .init();
-
-    // Spawn a new async task to receive and write messages to stdout
-    tokio::spawn(async move {
-        let mut stdout = std::io::stdout();
-        while let Ok(entry) = rx.recv().await {
-            write_entry(&mut stdout, &entry, 0).unwrap();
-        }
-    });
-
-    tracing::info!("let's go!");
-
-    let handle = std::thread::spawn(|| {
-        foobar();
-    });
-    foobar();
-    handle.join().unwrap();
-}
-
-use chrono::{DateTime, Utc};
-use std::io::{self, Write};
-
-fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Result<()> {
-    let datetime = UNIX_EPOCH + Duration::from_micros(entry.stamp);
-    let datetime: DateTime<Utc> = DateTime::from(datetime);
-    let formatted_time = datetime.format("%Y-%m-%dT%H:%M:%S.%f");
-
-    writeln!(
-        writer,
-        "{} {}:{} {}{} {}",
-        formatted_time,
-        entry.file.as_ref().map_or("", |f| f.as_str()),
-        entry.line.unwrap_or(0),
-        entry.level,
-        "    ".repeat(depth), // Indentation
-        format_entry_message(entry)
-    )?;
-
-    for child in &entry.children {
-        write_entry(writer, child, depth + 1)?;
-    }
-
-    Ok(())
-}
-
-fn format_entry_message(entry: &Entry) -> String {
-    let mut parts = vec![];
-
-    if entry.took > 0 {
-        parts.push(format!("[{} {}us]", entry.name, entry.took));
-    }
-
-    for (key, value) in &entry.fields {
-        if key != "message" {
-            parts.push(format!("{}={}", key, value));
-        }
-    }
-
-    if let Some(message) = entry.fields.get("message") {
-        parts.push(format!(":: {}", message));
-    }
-
-    parts.join(" ")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::sync::broadcast;
-    use tracing_subscriber::layer::SubscriberExt;
-
-    #[tokio::test]
-    async fn test_layer() {
-        let (tx, mut rx) = broadcast::channel(16);
-
-        let monitor = Arc::new(Mutex::new(Monitor { span_count: 0 }));
-
-        {
-            let _subscriber = tracing_subscriber::Registry::default()
-                .with(RootSpanLayer::new(tx, Some(monitor.clone())))
-                .set_default();
-
-            foobar();
-        }
-
-        assert_eq!(monitor.lock().unwrap().span_count, 0);
-
-        let entry = rx.recv().await.unwrap();
-        assert_eq!(entry.name, "foobar");
     }
 }
