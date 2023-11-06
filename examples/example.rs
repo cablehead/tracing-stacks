@@ -8,7 +8,7 @@ use tokio::sync::broadcast;
 
 use chrono::{DateTime, Utc};
 
-use colored::Colorize;
+use console::style;
 
 use tracing_layer_lib::{Entry, RootSpanLayer};
 
@@ -55,12 +55,12 @@ fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Res
     let prefix = match depth {
         0 => "".to_string(),
         _ => format!(
-            "{}{}─ ",
+            "{}{} ",
             "    ".repeat(depth - 1),
             if entry.children.is_empty() {
                 "└─"
             } else {
-                "|"
+                "├"
             }
         ),
     };
@@ -81,10 +81,12 @@ fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Res
         format_entry_message(entry),
     );
 
-    let total_width = console::measure_text_width(&message) + console::measure_text_width(&loc);
-    let padding = " ".repeat(80 - total_width);
+    let content_width =
+        console::measure_text_width(message.as_str()) + console::measure_text_width(loc.as_str());
+    let (_, terminal_width) = console::Term::stdout().size();
 
-    writeln!(writer, "{}{}{}", message, padding, loc)?;
+    let pad = " ".repeat((terminal_width as usize).saturating_sub(content_width));
+    writeln!(writer, "{}{}{}", message, pad, loc)?;
 
     for child in &entry.children {
         write_entry(writer, child, depth + 1)?;
@@ -97,7 +99,7 @@ fn format_entry_message(entry: &Entry) -> String {
     let mut parts = vec![];
 
     if entry.took > 0 {
-        parts.push(format!("{} ({}us)", entry.name.green(), entry.took));
+        parts.push(format!("{} ({}us)", style(&entry.name).cyan(), entry.took));
     }
 
     let mut fields = entry.fields.clone();
@@ -116,7 +118,7 @@ fn format_entry_message(entry: &Entry) -> String {
     }
 
     if let Some(message) = message {
-        parts.push(format!("{}", message.italic()));
+        parts.push(style(message).italic().to_string());
     }
 
     parts.join(" ")
