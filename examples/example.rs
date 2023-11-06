@@ -96,30 +96,29 @@ fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Res
 }
 
 fn format_entry_message(entry: &Entry) -> String {
-    let mut parts = vec![];
+    let mut parts = Vec::new();
 
     if entry.took > 0 {
-        parts.push(format!("{} ({}us)", style(&entry.name).cyan(), entry.took));
+        parts.push(style(&entry.name).cyan().to_string());
+        parts.push(format!("({}us)", entry.took));
     }
 
-    let mut fields = entry.fields.clone();
-
-    let message = fields.remove("message");
+    let fields = entry
+        .fields
+        .iter()
+        .filter(|&(k, _)| k != "message")
+        .map(|(k, v)| format!("{}:{}", k, v))
+        .collect::<Vec<_>>()
+        .join(" ");
 
     if !fields.is_empty() {
-        parts.push(format!(
-            "[{}]",
-            fields
-                .iter()
-                .map(|(key, value)| format!("{}:{}", key, value))
-                .collect::<Vec<String>>()
-                .join(" ")
-        ));
+        parts.push(format!("[{}]", fields));
     }
 
-    if let Some(message) = message {
-        parts.push(style(message).italic().to_string());
-    }
+    entry
+        .fields
+        .get("message")
+        .map(|m| parts.push(style(m).italic().to_string()));
 
     parts.join(" ")
 }
