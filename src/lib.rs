@@ -14,6 +14,8 @@ use tracing_subscriber::layer::Context;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
+mod tests;
+
 pub struct Monitor {
     pub span_count: usize,
 }
