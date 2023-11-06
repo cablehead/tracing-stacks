@@ -1,12 +1,14 @@
-use tracing_layer_lib::{Entry, RootSpanLayer};
-
-use tracing_subscriber::util::SubscriberInitExt;
-
-use chrono::{DateTime, Utc};
 use std::io::{self, Write};
 use std::time::{Duration, UNIX_EPOCH};
-use tokio::sync::broadcast;
+
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+
+use tokio::sync::broadcast;
+
+use chrono::{DateTime, Utc};
+
+use tracing_layer_lib::{Entry, RootSpanLayer};
 
 #[tracing::instrument]
 fn more(x: u32) {
@@ -16,47 +18,62 @@ fn more(x: u32) {
 #[tracing::instrument]
 fn foobar() {
     more(3);
+    more(5);
 }
 
 #[tokio::main]
 async fn main() {
     let (tx, mut rx) = broadcast::channel(16);
 
-    tracing_subscriber::Registry::default()
-        .with(RootSpanLayer::new(tx.clone(), None))
-        .init();
-
     // Spawn a new async task to receive and write messages to stdout
-    tokio::spawn(async move {
+    let logger = tokio::spawn(async move {
         let mut stdout = std::io::stdout();
         while let Ok(entry) = rx.recv().await {
             write_entry(&mut stdout, &entry, 0).unwrap();
         }
     });
 
-    tracing::info!("let's go!");
+    {
+        let _subscriber = tracing_subscriber::Registry::default()
+            .with(RootSpanLayer::new(tx, None))
+            .set_default();
 
-    let handle = std::thread::spawn(|| {
+        tracing::info!("let's go!");
         foobar();
-    });
-    foobar();
-    handle.join().unwrap();
+    }
+
+    let _ = logger.await;
 }
 
 fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Result<()> {
     let datetime = UNIX_EPOCH + Duration::from_micros(entry.stamp);
     let datetime: DateTime<Utc> = DateTime::from(datetime);
-    let formatted_time = datetime.format("%Y-%m-%dT%H:%M:%S.%f");
+    let formatted_time = datetime.format("%H:%M:%S%.3f");
+
+    let prefix = match depth {
+        0 => "".to_string(),
+        _ => format!(
+            "{}{}─ ",
+            "    ".repeat(depth - 1),
+            if entry.children.is_empty() {
+                "└─"
+            } else {
+                "|"
+            }
+        ),
+    };
+
+    let loc = format!("{}:{}", entry.file.as_ref().map_or("", |f| f.as_str()),
+        entry.line.map_or_else(|| "".to_string(), |num| num.to_string()));
 
     writeln!(
         writer,
-        "{} {}:{} {}{} {}",
+        "{} {:>5} {}{}  {}",
         formatted_time,
-        entry.file.as_ref().map_or("", |f| f.as_str()),
-        entry.line.unwrap_or(0),
         entry.level,
-        "    ".repeat(depth), // Indentation
-        format_entry_message(entry)
+        prefix,
+        format_entry_message(entry),
+        loc,
     )?;
 
     for child in &entry.children {
