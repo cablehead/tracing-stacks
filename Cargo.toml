@@ -1,5 +1,5 @@
 [package]
-name = "tracing_layer_lib"
+name = "tracing_stacks"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,5 +13,5 @@ tracing-subscriber = "0.3.17"
 console = "0.15.7"
 
 [lib]
-name = "tracing_layer_lib"
+name = "tracing_stacks"
 path = "src/lib.rs"

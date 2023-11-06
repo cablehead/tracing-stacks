@@ -12,9 +12,9 @@ pub fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io:
     let prefix = "    ".repeat(depth.saturating_sub(1))
         + if depth > 0 {
             if entry.children.is_empty() {
-                "└─"
+                "└─ "
             } else {
-                "├"
+                "├ "
             }
         } else {
             ""

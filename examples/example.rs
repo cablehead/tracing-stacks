@@ -3,7 +3,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use tokio::sync::broadcast;
 
-use tracing_layer_lib::{fmt::write_entry, RootSpanLayer};
+use tracing_stacks::{fmt::write_entry, RootSpanLayer};
 
 #[tracing::instrument]
 fn more(x: u32) {

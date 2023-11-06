@@ -527,7 +527,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing_layer_lib"
+name = "tracing_stacks"
 version = "0.1.0"
 dependencies = [
  "chrono",
