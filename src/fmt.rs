@@ -2,12 +2,13 @@ use std::io::{self, Write};
 use std::time::{Duration, UNIX_EPOCH};
 
 use crate::Entry;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use console::style;
 
 pub fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Result<()> {
     let datetime = UNIX_EPOCH + Duration::from_micros(entry.stamp);
-    let formatted_time = DateTime::<Utc>::from(datetime).format("%H:%M:%S%.3f");
+    let local_time = DateTime::<Utc>::from(datetime).with_timezone(&Local);
+    let formatted_time = local_time.format("%H:%M:%S%.3f");
 
     let prefix = "    ".repeat(depth.saturating_sub(1))
         + if depth > 0 {
