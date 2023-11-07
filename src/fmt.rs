@@ -5,21 +5,25 @@ use crate::Entry;
 use chrono::{DateTime, Local, Utc};
 use console::style;
 
-pub fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io::Result<()> {
+pub fn write_entry<W: Write>(writer: &mut W, entry: &Entry) -> io::Result<()> {
+    write_entry_inner(writer, entry, 0, false)
+}
+
+fn write_entry_inner<W: Write>(
+    writer: &mut W,
+    entry: &Entry,
+    depth: usize,
+    last: bool,
+) -> io::Result<()> {
     let datetime = UNIX_EPOCH + Duration::from_micros(entry.stamp);
     let local_time = DateTime::<Utc>::from(datetime).with_timezone(&Local);
     let formatted_time = local_time.format("%H:%M:%S%.3f");
 
-    let prefix = "    ".repeat(depth.saturating_sub(1))
-        + if depth > 0 {
-            if entry.children.is_empty() {
-                "└─ "
-            } else {
-                "├ "
-            }
-        } else {
-            ""
-        };
+    let prefix = if depth > 0 {
+        "    ".repeat(depth.saturating_sub(1)) + if last { " └─ " } else { " ├─ " }
+    } else {
+        "".to_string()
+    };
 
     let loc = entry.file.as_deref().unwrap_or_default().to_owned()
         + &entry
@@ -45,8 +49,8 @@ pub fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io:
         loc
     )?;
 
-    for child in &entry.children {
-        write_entry(writer, child, depth + 1)?;
+    for (i, child) in entry.children.iter().enumerate() {
+        write_entry_inner(writer, child, depth + 1, i == entry.children.len() - 1)?;
     }
 
     Ok(())

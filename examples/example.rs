@@ -11,9 +11,14 @@ fn more(x: u32) {
 }
 
 #[tracing::instrument]
+fn nested_more(x: u32) {
+    more(x)
+}
+
+#[tracing::instrument]
 fn foobar() {
     more(3);
-    more(5);
+    nested_more(5);
 }
 
 #[tokio::main]
@@ -24,7 +29,7 @@ async fn main() {
     let logger = tokio::spawn(async move {
         let mut stdout = std::io::stdout();
         while let Ok(entry) = rx.recv().await {
-            write_entry(&mut stdout, &entry, 0).unwrap();
+            write_entry(&mut stdout, &entry).unwrap();
         }
     });
 
