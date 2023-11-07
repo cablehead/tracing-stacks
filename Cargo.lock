@@ -513,6 +513,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-stacks"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "console",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -524,19 +537,6 @@ dependencies = [
  "thread_local",
  "tracing-core",
  "tracing-log",
-]
-
-[[package]]
-name = "tracing_stacks"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "console",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
