@@ -55,9 +55,9 @@ pub fn write_entry<W: Write>(writer: &mut W, entry: &Entry, depth: usize) -> io:
 fn format_entry_message(entry: &Entry) -> String {
     let mut parts = Vec::new();
 
-    if entry.took > 0 {
+    if let Some(took) = entry.took {
         parts.push(style(&entry.name).cyan().to_string());
-        let ms = entry.took / 1000;
+        let ms = took / 1000;
         if ms > 0 {
             parts.push(format!("[{}ms]", ms));
         }

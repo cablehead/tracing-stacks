@@ -43,7 +43,7 @@ pub struct Scope {
     file: Option<String>,
     line: Option<u32>,
     start_time: Option<Instant>,
-    took: u128, // Stores duration in microseconds
+    took: Option<u128>, // Stores duration in microseconds
     fields: HashMap<String, String>,
 }
 
@@ -71,7 +71,7 @@ impl Scope {
             file,
             line,
             start_time: None,
-            took: 0,
+            took: None,
             fields: HashMap::new(),
         }
     }
@@ -103,16 +103,12 @@ pub struct Entry {
     pub file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<u32>,
-    #[serde(skip_serializing_if = "is_zero")]
-    pub took: u128,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub took: Option<u128>,
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
     pub fields: HashMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub children: Vec<Entry>,
-}
-
-fn is_zero(num: &u128) -> bool {
-    *num == 0
 }
 
 fn extract_span_root(root_id: Id, spans: &mut HashMap<Id, Scope>) -> Entry {
@@ -212,7 +208,7 @@ where
         if let Some(scope) = spans.get_mut(id) {
             if let Some(start_time) = scope.start_time {
                 let elapsed = start_time.elapsed().as_micros();
-                scope.took += elapsed;
+                scope.took = Some(scope.took.unwrap_or(0) + elapsed);
                 scope.start_time = None; // Reset the start time
             }
         }
