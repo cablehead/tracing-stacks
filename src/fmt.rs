@@ -36,6 +36,14 @@ fn write_entry_inner<W: Write>(
         + &entry
             .line
             .map_or_else(String::new, |num| format!(":{}", num));
+    let loc = loc
+        .chars()
+        .rev()
+        .take(25)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect::<String>();
 
     let message = format!(
         "{} {:>5} {:>7} {}{}",
