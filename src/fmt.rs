@@ -47,7 +47,7 @@ fn write_entry_inner<W: Write>(
     );
 
     let content_width = console::measure_text_width(&message) + console::measure_text_width(&loc);
-    let terminal_width = console::Term::stdout().size().1 as usize;
+    let terminal_width = std::cmp::min(110, console::Term::stdout().size().1 as usize);
 
     writeln!(
         writer,
