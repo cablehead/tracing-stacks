@@ -32,10 +32,11 @@ fn write_entry_inner<W: Write>(
         "".to_string()
     };
 
-    let loc = entry.file.as_deref().unwrap_or_default().to_owned()
-        + &entry
-            .line
-            .map_or_else(String::new, |num| format!(":{}", num));
+    let loc = entry.module_path.as_ref().map_or_else(String::new, ToString::to_string)
+    + &entry
+        .line
+        .map_or_else(String::new, |num| format!(":{}", num));
+
     let loc = loc
         .chars()
         .rev()

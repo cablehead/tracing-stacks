@@ -40,6 +40,7 @@ pub struct Scope {
     name: String,
     parent_id: Option<Id>,
     children: Vec<Child>,
+    module_path: Option<String>,
     file: Option<String>,
     line: Option<u32>,
     start_time: Option<Instant>,
@@ -59,6 +60,7 @@ impl Scope {
         level: Level,
         name: String,
         parent_id: Option<Id>,
+        module_path: Option<String>,
         file: Option<String>,
         line: Option<u32>,
     ) -> Self {
@@ -68,6 +70,7 @@ impl Scope {
             name,
             parent_id,
             children: Vec::new(),
+            module_path,
             file,
             line,
             start_time: None,
@@ -85,6 +88,7 @@ impl Scope {
                 .as_micros() as u64,
             level: self.level.to_string(),
             name: self.name.clone(),
+            module_path: self.module_path.clone(),
             file: self.file.clone(),
             line: self.line,
             took: self.took,
@@ -99,6 +103,8 @@ pub struct Entry {
     pub stamp: u64,
     pub level: String,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub module_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -155,6 +161,7 @@ where
             *metadata.level(),
             metadata.name().to_string(),
             parent_id.cloned(),
+            metadata.module_path().map(ToString::to_string),
             metadata.file().map(ToString::to_string),
             metadata.line(),
         );
@@ -178,6 +185,7 @@ where
             *metadata.level(),
             metadata.name().to_string(),
             ctx.current_span().id().cloned(),
+            metadata.module_path().map(ToString::to_string),
             metadata.file().map(ToString::to_string),
             metadata.line(),
         );
