@@ -19,6 +19,13 @@ fn write_entry_inner<W: Write>(
     let local_time = DateTime::<Utc>::from(datetime).with_timezone(&Local);
     let formatted_time = local_time.format("%H:%M:%S%.3f");
 
+    let took = if let Some(took) = entry.took {
+        let ms = took / 1000;
+        format!("{}ms", ms)
+    } else {
+        "".to_string()
+    };
+
     let prefix = if depth > 0 {
         "    ".repeat(depth.saturating_sub(1)) + if last { " └─ " } else { " ├─ " }
     } else {
@@ -31,9 +38,10 @@ fn write_entry_inner<W: Write>(
             .map_or_else(String::new, |num| format!(":{}", num));
 
     let message = format!(
-        "{} {:>5} {}{}",
+        "{} {:>5} {:>7} {}{}",
         formatted_time,
         entry.level,
+        took,
         prefix,
         format_entry_message(entry)
     );
@@ -59,12 +67,8 @@ fn write_entry_inner<W: Write>(
 fn format_entry_message(entry: &Entry) -> String {
     let mut parts = Vec::new();
 
-    if let Some(took) = entry.took {
+    if let Some(_) = entry.took {
         parts.push(style(&entry.name).cyan().to_string());
-        let ms = took / 1000;
-        if ms > 0 {
-            parts.push(format!("[{}ms]", ms));
-        }
     }
 
     let fields = entry
