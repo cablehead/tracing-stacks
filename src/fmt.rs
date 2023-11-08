@@ -71,20 +71,20 @@ fn format_entry_message(entry: &Entry) -> String {
         parts.push(style(&entry.name).cyan().to_string());
     }
 
+    if let Some(m) = entry.fields.get("message") {
+        parts.push(style(m).italic().to_string())
+    }
+
     let fields = entry
         .fields
         .iter()
         .filter(|&(k, _)| k != "message")
-        .map(|(k, v)| format!("{}:{}", k, v))
+        .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join(" ");
 
     if !fields.is_empty() {
-        parts.push(format!("[{}]", fields));
-    }
-
-    if let Some(m) = entry.fields.get("message") {
-        parts.push(style(m).italic().to_string())
+        parts.push(format!("{}", fields));
     }
 
     parts.join(" ")
