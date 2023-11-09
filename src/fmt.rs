@@ -19,11 +19,9 @@ fn write_entry_inner<W: Write>(
     let local_time = DateTime::<Utc>::from(datetime).with_timezone(&Local);
     let formatted_time = local_time.format("%H:%M:%S%.3f");
 
-    let took = if let Some(took) = entry.took {
-        let ms = took / 1000;
-        format!("{}ms", ms)
-    } else {
-        "".to_string()
+    let took = match entry.took {
+        Some(took) if took >= 1000 => format!("{}ms", took / 1000),
+        _ => "".to_string(),
     };
 
     let prefix = if depth > 0 {
@@ -32,10 +30,13 @@ fn write_entry_inner<W: Write>(
         "".to_string()
     };
 
-    let loc = entry.module_path.as_ref().map_or_else(String::new, ToString::to_string)
-    + &entry
-        .line
-        .map_or_else(String::new, |num| format!(":{}", num));
+    let loc = entry
+        .module_path
+        .as_ref()
+        .map_or_else(String::new, ToString::to_string)
+        + &entry
+            .line
+            .map_or_else(String::new, |num| format!(":{}", num));
 
     let loc = loc
         .chars()
