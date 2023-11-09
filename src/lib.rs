@@ -227,7 +227,10 @@ where
         if let Some(scope) = spans.get(&id) {
             if scope.parent_id.is_none() {
                 let inlined_scope = extract_span_root(id.clone(), &mut spans);
-                self.sender.send(inlined_scope).unwrap();
+                match self.sender.send(inlined_scope) {
+                    Ok(_) => (),
+                    Err(e) => eprintln!("telemetry broadcast channel: {:?}", e),
+                }
             }
             if let Some(monitor) = &self.monitor {
                 monitor.lock().unwrap().notify(&spans);
